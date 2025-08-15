@@ -80,16 +80,10 @@ spec:
               value: {{ .Values.minio.secretKey | quote }}
             - name: STORAGE_BUCKET
               value: {{ .Values.minio.bucket | quote }}
-            - name: ES_ADDR
-              value: "http://{{ include "opencoze.fullname" . }}-elasticsearch:9200"
-            - name: ES_USERNAME
-              value: {{ .Values.elasticsearch.username | quote }}
-            - name: ES_PASSWORD
-              value: {{ .Values.elasticsearch.password | quote }}
+            - name: OCEANBASE_DSN
+              value: "{{ .Values.mysql.user }}:{{ .Values.mysql.password }}@tcp({{ include "opencoze.fullname" . }}-mysql:{{ .Values.mysql.port }})/{{ .Values.mysql.database }}?charset=utf8mb4&parseTime=True&loc=Local"
             - name: MQ_NAME_SERVER
               value: "http://{{ include "opencoze.fullname" . }}-rocketmq-namesrv:9876"
-            - name: MILVUS_ADDR
-              value: "{{ include "opencoze.fullname" . }}-milvus:19530"
             - name: MINIO_ENDPOINT
               value: "{{ include "opencoze.fullname" . }}-minio:9000"
             - name: MINIO_API_HOST

@@ -1,6 +1,6 @@
 
 env "local" {
-  url = "mysql://coze:coze123@localhost:3306/opencoze?charset=utf8mb4&parseTime=True"
+  url = "mysql://root@test:coze123@localhost:2881/opencoze?charset=utf8mb4&parseTime=True"
   dev = "docker://mysql/8"
 
 

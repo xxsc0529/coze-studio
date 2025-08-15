@@ -37,6 +37,7 @@ import (
 	"github.com/coze-dev/coze-studio/backend/infra/contract/es"
 	"github.com/coze-dev/coze-studio/backend/infra/contract/storage"
 	"github.com/coze-dev/coze-studio/backend/infra/impl/eventbus"
+	searchoceanbase "github.com/coze-dev/coze-studio/backend/infra/impl/search/oceanbase"
 	"github.com/coze-dev/coze-studio/backend/pkg/logs"
 	"github.com/coze-dev/coze-studio/backend/types/consts"
 )
@@ -60,13 +61,31 @@ type ServiceComponents struct {
 }
 
 func InitService(ctx context.Context, s *ServiceComponents) (*SearchApplicationService, error) {
-	searchDomainSVC := search.NewDomainService(ctx, s.ESClient)
+	// 检查是否使用OceanBase作为搜索后端，默认为oceanbase
+	searchBackend := os.Getenv("SEARCH_BACKEND")
+	if searchBackend == "" {
+		searchBackend = "oceanbase" // 默认使用OceanBase
+	}
+
+	var searchClient es.Client
+
+	if searchBackend == "oceanbase" {
+		// 使用OceanBase作为搜索后端
+		logs.Infof("Using OceanBase as search backend")
+		searchClient = searchoceanbase.NewOceanBaseSearchClient(s.DB)
+	} else {
+		// 使用Elasticsearch作为搜索后端
+		logs.Infof("Using Elasticsearch as search backend")
+		searchClient = s.ESClient
+	}
+
+	searchDomainSVC := search.NewDomainService(ctx, searchClient)
 
 	SearchSVC.DomainSVC = searchDomainSVC
 	SearchSVC.ServiceComponents = s
 
 	// setup consumer
-	searchConsumer := search.NewProjectHandler(ctx, s.ESClient)
+	searchConsumer := search.NewProjectHandler(ctx, searchClient)
 
 	logs.Infof("start search domain consumer...")
 	nameServer := os.Getenv(consts.MQServer)
@@ -76,7 +95,7 @@ func InitService(ctx context.Context, s *ServiceComponents) (*SearchApplicationS
 		return nil, fmt.Errorf("register search consumer failed, err=%w", err)
 	}
 
-	searchResourceConsumer := search.NewResourceHandler(ctx, s.ESClient)
+	searchResourceConsumer := search.NewResourceHandler(ctx, searchClient)
 
 	err = eventbus.DefaultSVC().RegisterConsumer(nameServer, consts.RMQTopicResource, consts.RMQConsumeGroupResource, searchResourceConsumer)
 	if err != nil {

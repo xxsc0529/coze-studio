@@ -3,6 +3,7 @@
 -- 当主键或唯一键冲突时，不会插入新记录，而是更新指定字段
 SET NAMES utf8mb4;
 
+USE opencoze;
 -- mock chat mode config for self-test, if publish should remove
 
 INSERT INTO single_agent_draft (

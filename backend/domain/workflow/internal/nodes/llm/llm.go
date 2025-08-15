@@ -731,7 +731,10 @@ func (c *Config) Build(ctx context.Context, ns *schema2.NodeSchema, _ ...schema2
 	_ = g.AddEdge(llmNodeKey, outputConvertNodeKey)
 	_ = g.AddEdge(outputConvertNodeKey, compose.END)
 
-	requireCheckpoint := c.RequireCheckpoint()
+	requireCheckpoint := false
+	if len(tools) > 0 {
+		requireCheckpoint = true
+	}
 
 	var compileOpts []compose.GraphCompileOption
 	if requireCheckpoint {
@@ -756,16 +759,8 @@ func (c *Config) Build(ctx context.Context, ns *schema2.NodeSchema, _ ...schema2
 
 func (c *Config) RequireCheckpoint() bool {
 	if c.FCParam != nil {
-		if c.FCParam.WorkflowFCParam != nil {
-			if len(c.FCParam.WorkflowFCParam.WorkflowList) > 0 {
-				return true
-			}
-		}
-
-		if c.FCParam.PluginFCParam != nil {
-			if len(c.FCParam.PluginFCParam.PluginList) > 0 {
-				return true
-			}
+		if c.FCParam.WorkflowFCParam != nil || c.FCParam.PluginFCParam != nil {
+			return true
 		}
 	}
 

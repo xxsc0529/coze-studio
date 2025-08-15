@@ -102,9 +102,9 @@ func (s *SingleAgentApplicationService) newDefaultSingleAgent(ctx context.Contex
 			Prompt:         &bot_common.PromptInfo{},
 			Plugin:         []*bot_common.PluginInfo{},
 			Knowledge: &bot_common.Knowledge{
-				TopK:           ptr.Of(int64(1)),
+				TopK:           ptr.Of(int64(20)),
 				MinScore:       ptr.Of(0.01),
-				SearchStrategy: ptr.Of(bot_common.SearchStrategy_SemanticSearch),
+				SearchStrategy: ptr.Of(bot_common.SearchStrategy_HybirdSearch),
 				RecallStrategy: &bot_common.RecallStrategy{
 					UseNl2sql:  ptr.Of(true),
 					UseRerank:  ptr.Of(true),

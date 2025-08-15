@@ -238,7 +238,7 @@ func (w *Workflow) addNodeInternal(ctx context.Context, ns *schema.NodeSchema, i
 		innerWorkflow = inner.inner
 	}
 
-	ins, err := New(ctx, ns, innerWorkflow, w.schema, deps, w.requireCheckpoint)
+	ins, err := New(ctx, ns, innerWorkflow, w.schema, deps)
 	if err != nil {
 		return nil, err
 	}

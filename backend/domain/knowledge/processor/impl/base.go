@@ -75,6 +75,10 @@ func (p *baseDocProcessor) BuildDBModel() error {
 		return errorx.New(errno.ErrKnowledgeIDGenCode)
 	}
 	for i := range p.Documents {
+		// 添加调试日志
+		logs.CtxInfof(p.ctx, "Document %d: FileExtension='%s', Name='%s', URI='%s'", 
+			i, p.Documents[i].FileExtension, p.Documents[i].Name, p.Documents[i].URI)
+		
 		docModel := &model.KnowledgeDocument{
 			ID:            ids[i],
 			KnowledgeID:   p.Documents[i].KnowledgeID,

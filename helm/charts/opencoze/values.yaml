@@ -64,7 +64,7 @@ cozeServer:
     MINIO_PROXY_ENDPOINT: ":8889"
     COZE_MQ_TYPE: rmq
     ES_VERSION: "v8"
-    VECTOR_STORE_TYPE: "milvus"
+    VECTOR_STORE_TYPE: "oceanbase"
     EMBEDDING_TYPE: "ark"
     ARK_EMBEDDING_MODEL: ""
     ARK_EMBEDDING_DIMS: "1024"

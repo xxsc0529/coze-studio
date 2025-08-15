@@ -307,6 +307,12 @@ func (k *KnowledgeApplicationService) CreateDocument(ctx context.Context, req *d
 		if req.GetChunkStrategy() != nil {
 			captionType = req.GetChunkStrategy().CaptionType
 		}
+
+		// 添加调试日志
+		fileExt := GetExtension(req.GetDocumentBases()[i].GetSourceInfo().GetTosURI())
+		logs.CtxInfof(ctx, "Document %d: URI='%s', GetExtension result='%s'",
+			i, req.GetDocumentBases()[i].GetSourceInfo().GetTosURI(), fileExt)
+
 		document := entity.Document{
 			Info: model.Info{
 				Name:      req.GetDocumentBases()[i].GetName(),
@@ -318,7 +324,7 @@ func (k *KnowledgeApplicationService) CreateDocument(ctx context.Context, req *d
 			Type:             convertDocumentTypeDataset2Entity(req.GetFormatType()),
 			RawContent:       req.GetDocumentBases()[i].GetSourceInfo().GetCustomContent(),
 			URI:              req.GetDocumentBases()[i].GetSourceInfo().GetTosURI(),
-			FileExtension:    parser.FileExtension(GetExtension(req.GetDocumentBases()[i].GetSourceInfo().GetTosURI())),
+			FileExtension:    parser.FileExtension(fileExt),
 			Source:           docSource,
 			IsAppend:         req.GetIsAppend(),
 			ParsingStrategy:  convertParsingStrategy2Entity(req.GetParsingStrategy(), req.GetDocumentBases()[i].TableSheet, captionType, req.GetDocumentBases()[i].FilterStrategy),

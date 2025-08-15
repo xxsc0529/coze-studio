@@ -224,10 +224,17 @@ func (k *knowledgeSVC) indexDocument(ctx context.Context, event *entity.Event) (
 		return errorx.New(errno.ErrKnowledgeGetObjectFailCode, errorx.KV("msg", fmt.Sprintf("get object failed, err: %v", err)))
 	}
 
+	// get parser
 	docParser, err := k.parseManager.GetParser(convert.DocumentToParseConfig(doc))
 	if err != nil {
-		return errorx.New(errno.ErrKnowledgeGetParserFailCode, errorx.KV("msg", fmt.Sprintf("get parser failed, err: %v", err)))
+		logs.CtxErrorf(ctx, "get parser failed, err: %v", err)
+		return errorx.New(errno.ErrKnowledgeGetParserFailCode, 
+			errorx.KV("msg", fmt.Sprintf("get parser failed, err: %v", err)))
 	}
+
+	// 添加调试日志
+	logs.CtxInfof(ctx, "Document parsing: ID=%d, Name='%s', FileExtension='%s', URI='%s'", 
+		doc.ID, doc.Name, doc.FileExtension, doc.URI)
 
 	parseResult, err := docParser.Parse(ctx, bytes.NewReader(bodyBytes), parser.WithExtraMeta(map[string]any{
 		document.MetaDataKeyCreatorID: doc.CreatorID,

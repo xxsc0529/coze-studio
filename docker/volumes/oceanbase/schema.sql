@@ -1,5 +1,8 @@
 SET NAMES utf8mb4;
 CREATE DATABASE IF NOT EXISTS opencoze COLLATE utf8mb4_unicode_ci;
+
+USE opencoze;
+
 -- Create 'agent_to_database' table
 CREATE TABLE IF NOT EXISTS `agent_to_database` (`id` bigint unsigned NOT NULL COMMENT 'ID', `agent_id` bigint unsigned NOT NULL COMMENT 'Agent ID', `database_id` bigint unsigned NOT NULL COMMENT 'ID of database_info', `is_draft` bool NOT NULL COMMENT 'Is draft', `prompt_disable` bool NOT NULL DEFAULT 0 COMMENT 'Support prompt calls: 1 not supported, 0 supported', PRIMARY KEY (`id`), UNIQUE INDEX `uniq_agent_db_draft` (`agent_id`, `database_id`, `is_draft`)) ENGINE=InnoDB CHARSET utf8mb4 COLLATE utf8mb4_general_ci COMMENT 'agent_to_database info';
 -- Create 'agent_tool_draft' table
@@ -90,6 +93,118 @@ CREATE TABLE IF NOT EXISTS `workflow_reference` (`id` bigint unsigned NOT NULL C
 CREATE TABLE IF NOT EXISTS `workflow_snapshot` (`workflow_id` bigint unsigned NOT NULL COMMENT 'workflow id this snapshot belongs to', `commit_id` varchar(255) NOT NULL COMMENT 'the commit id of the workflow draft', `canvas` mediumtext NULL COMMENT 'frontend schema for this snapshot', `input_params` mediumtext NULL COMMENT 'input parameter info', `output_params` mediumtext NULL COMMENT 'output parameter info', `created_at` bigint unsigned NOT NULL COMMENT 'Create Time in Milliseconds', `id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID', PRIMARY KEY (`id`), UNIQUE INDEX `uniq_workflow_id_commit_id` (`workflow_id`, `commit_id`)) ENGINE=InnoDB CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT 'snapshot for executed workflow draft';
 -- Create 'workflow_version' table
 CREATE TABLE IF NOT EXISTS `workflow_version` (`id` bigint unsigned NOT NULL AUTO_INCREMENT COMMENT 'ID', `workflow_id` bigint unsigned NOT NULL COMMENT 'workflow id', `version` varchar(50) NOT NULL COMMENT 'Published version', `version_description` varchar(2000) NOT NULL COMMENT 'Version Description', `canvas` mediumtext NULL COMMENT 'Front end schema', `input_params` mediumtext NULL COMMENT 'input params', `output_params` mediumtext NULL COMMENT 'output params', `creator_id` bigint unsigned NOT NULL COMMENT 'creator id', `created_at` bigint unsigned NOT NULL COMMENT 'Create Time in Milliseconds', `deleted_at` datetime(3) NULL COMMENT 'Delete Time', `commit_id` varchar(255) NOT NULL COMMENT 'the commit id corresponding to this version', PRIMARY KEY (`id`), INDEX `idx_id_created_at` (`workflow_id`, `created_at`), UNIQUE INDEX `uniq_workflow_id_version` (`workflow_id`, `version`)) ENGINE=InnoDB CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT 'Workflow Canvas Version Information Table, used to record canvas information for different versions';
+
+-- OceanBase 初始化脚本
+-- 配置向量索引内存
+ALTER SYSTEM SET ob_vector_memory_limit_percentage = 30;
+
+-- 创建缓存相关表
+-- 缓存键值对表
+CREATE TABLE IF NOT EXISTS cache_kvs (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    cache_key VARCHAR(256) NOT NULL UNIQUE,
+    cache_value LONGBLOB NOT NULL,
+    expire_time DATETIME NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_expire_time (expire_time)
+) ENGINE=InnoDB CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '缓存键值对表';
+
+-- 缓存映射表
+CREATE TABLE IF NOT EXISTS cache_maps (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    cache_key VARCHAR(256) NOT NULL,
+    cache_field VARCHAR(256) NOT NULL,
+    cache_value LONGBLOB NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE INDEX idx_cache_key_field (cache_key, cache_field)
+) ENGINE=InnoDB CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '缓存映射表';
+
+-- 缓存消息表
+CREATE TABLE IF NOT EXISTS cache_messages (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    channel VARCHAR(1024) NOT NULL,
+    message TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_channel (channel)
+) ENGINE=InnoDB CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '缓存消息表';
+
+-- 缓存消息订阅表
+CREATE TABLE IF NOT EXISTS cache_message_subscribes (
+    channel VARCHAR(1024) NOT NULL,
+    subscriber VARCHAR(1024) NOT NULL,
+    last_message_id BIGINT NOT NULL DEFAULT -1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE INDEX idx_channel_subscriber (channel, subscriber)
+) ENGINE=InnoDB CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci COMMENT '缓存消息订阅表';
+
+-- 创建项目搜索表（支持全文索引）
+CREATE TABLE IF NOT EXISTS project_search (
+  id BIGINT PRIMARY KEY,
+  space_id BIGINT NOT NULL,
+  owner_id BIGINT NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  status INT DEFAULT 1,
+  type INT DEFAULT 1,
+  has_published BOOLEAN DEFAULT FALSE,
+  is_fav BOOLEAN DEFAULT FALSE,
+  is_recently_open BOOLEAN DEFAULT FALSE,
+  create_time BIGINT,
+  update_time BIGINT,
+  publish_time BIGINT,
+  fav_time BIGINT,
+  recently_open_time BIGINT,
+  FULLTEXT INDEX ft_idx_name (name),
+  FULLTEXT INDEX ft_idx_description (description)
+);
+
+-- 创建资源搜索表（支持全文索引）
+CREATE TABLE IF NOT EXISTS resource_search (
+  id BIGINT PRIMARY KEY,
+  space_id BIGINT NOT NULL,
+  owner_id BIGINT NOT NULL,
+  app_id BIGINT DEFAULT 0,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  res_type INT DEFAULT 1,
+  res_sub_type INT DEFAULT 1,
+  publish_status INT DEFAULT 1,
+  create_time BIGINT,
+  update_time BIGINT,
+  FULLTEXT INDEX ft_idx_name (name),
+  FULLTEXT INDEX ft_idx_description (description)
+);
+
+-- 创建知识库向量表（支持向量检索和全文搜索）
+CREATE TABLE IF NOT EXISTS knowledge_vectors (
+  id BIGINT PRIMARY KEY,
+  collection_name VARCHAR(255) NOT NULL,
+  content TEXT NOT NULL,
+  embedding VECTOR(1024),
+  creator_id BIGINT NOT NULL,
+  create_time BIGINT,
+  update_time BIGINT,
+  VECTOR INDEX vec_idx_embedding(embedding) WITH (distance=cosine, type=hnsw),
+  FULLTEXT INDEX ft_idx_content(content)
+);
+
+-- 创建文档向量表（支持向量检索）
+CREATE TABLE IF NOT EXISTS document_vectors (
+  id BIGINT PRIMARY KEY,
+  collection_name VARCHAR(255) NOT NULL,
+  content TEXT NOT NULL,
+  embedding VECTOR(1024),
+  creator_id BIGINT NOT NULL,
+  create_time BIGINT,
+  update_time BIGINT,
+  VECTOR INDEX vec_idx_embedding(embedding) WITH (distance=L2, type=hnsw)
+);
+
+
 -- 初始化用户表数据
 -- 使用 INSERT ON DUPLICATE KEY UPDATE 语句
 -- 当主键或唯一键冲突时，不会插入新记录，而是更新指定字段

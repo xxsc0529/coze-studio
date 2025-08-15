@@ -18,13 +18,13 @@ import { I18n } from '@coze-arch/i18n';
 
 export const defaultKnowledgeGlobalSetting = {
   auto: false,
-  min_score: 0.5,
+  min_score: 0.01,
   no_recall_reply_customize_prompt: I18n.t('No_recall_006'),
   no_recall_reply_mode: 0,
-  search_strategy: 0,
+  search_strategy: 1, // 1 = HybirdSearch
   show_source: false,
   show_source_mode: 0,
-  top_k: 3,
+  top_k: 20,
   use_rerank: true,
   use_rewrite: true,
   use_nl2_sql: true,

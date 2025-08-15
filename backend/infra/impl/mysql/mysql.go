@@ -25,10 +25,20 @@ import (
 )
 
 func New() (*gorm.DB, error) {
-	dsn := os.Getenv("MYSQL_DSN")
-	db, err := gorm.Open(mysql.Open(dsn))
+	// 优先使用OceanBase连接字符串，如果没有则使用MySQL
+	dsn := os.Getenv("OCEANBASE_DSN")
+	if dsn == "" {
+		dsn = os.Getenv("MYSQL_DSN")
+	}
+
+	// 如果都没有设置，使用默认的OceanBase连接
+	if dsn == "" {
+		dsn = "root@test:coze123@tcp(localhost:2881)/opencoze?charset=utf8mb4&parseTime=True&loc=Local"
+	}
+
+	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
-		return nil, fmt.Errorf("mysql open, dsn: %s, err: %w", dsn, err)
+		return nil, fmt.Errorf("database open failed, dsn: %s, err: %w", dsn, err)
 	}
 
 	return db, nil

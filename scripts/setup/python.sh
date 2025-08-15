@@ -1,4 +1,20 @@
 #!/usr/bin/env bash
+#
+# Copyright 2025 coze-dev Authors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
 
 SETUP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPT_DIR="$(dirname "$SETUP_DIR")"
@@ -26,10 +42,14 @@ fi
 
 echo "Installing required Python packages"
 source "$VENV_DIR/bin/activate"
+
+# Unset proxy variables to avoid SOCKS support issues
+unset all_proxy http_proxy https_proxy HTTP_PROXY HTTPS_PROXY
+
 pip install --upgrade pip
 # If you want to use other third-party libraries, you can install them here.
 pip install urllib3==1.26.16
-pip install h11==0.16.0 httpx==0.28.1 pillow==11.2.1 pdfplumber==0.11.7 python-docx==1.2.0 numpy==2.3.1
+pip install h11==0.16.0 httpx==0.28.1 pillow==11.2.1 pdfplumber==0.11.7 python-docx==1.2.0 numpy==2.2.6
 
 if [ $? -ne 0 ]; then
     echo "Failed to install Python packages - aborting startup"

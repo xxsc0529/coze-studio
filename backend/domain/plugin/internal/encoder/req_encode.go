@@ -263,28 +263,28 @@ func MustString(value any) string {
 	}
 }
 
-func TryCorrectValueType(paramName string, schemaRef *openapi3.SchemaRef, value any) (any, error) {
+func TryFixValueType(paramName string, schemaRef *openapi3.SchemaRef, value any) (any, error) {
 	if value == nil {
 		return "", fmt.Errorf("value of '%s' is nil", paramName)
 	}
 
 	switch schemaRef.Value.Type {
 	case openapi3.TypeString:
-		return tryCorrectString(value)
+		return tryString(value)
 	case openapi3.TypeNumber:
-		return tryCorrectFloat64(value)
+		return tryFloat64(value)
 	case openapi3.TypeInteger:
-		return tryCorrectInt64(value)
+		return tryInt64(value)
 	case openapi3.TypeBoolean:
-		return tryCorrectBool(value)
+		return tryBool(value)
 	case openapi3.TypeArray:
 		arrVal, ok := value.([]any)
 		if !ok {
-			return nil, fmt.Errorf("[TryCorrectValueType] value '%s' is not array", paramName)
+			return nil, fmt.Errorf("[TryFixValueType] value '%s' is not array", paramName)
 		}
 
 		for i, v := range arrVal {
-			_v, err := TryCorrectValueType(paramName, schemaRef.Value.Items, v)
+			_v, err := TryFixValueType(paramName, schemaRef.Value.Items, v)
 			if err != nil {
 				return nil, err
 			}
@@ -296,7 +296,7 @@ func TryCorrectValueType(paramName string, schemaRef *openapi3.SchemaRef, value 
 	case openapi3.TypeObject:
 		mapVal, ok := value.(map[string]any)
 		if !ok {
-			return nil, fmt.Errorf("[TryCorrectValueType] value '%s' is not object", paramName)
+			return nil, fmt.Errorf("[TryFixValueType] value '%s' is not object", paramName)
 		}
 
 		for k, v := range mapVal {
@@ -305,7 +305,7 @@ func TryCorrectValueType(paramName string, schemaRef *openapi3.SchemaRef, value 
 				continue
 			}
 
-			_v, err := TryCorrectValueType(k, p, v)
+			_v, err := TryFixValueType(k, p, v)
 			if err != nil {
 				return nil, err
 			}
@@ -315,11 +315,11 @@ func TryCorrectValueType(paramName string, schemaRef *openapi3.SchemaRef, value 
 
 		return mapVal, nil
 	default:
-		return nil, fmt.Errorf("[TryCorrectValueType] unsupported schema type '%s'", schemaRef.Value.Type)
+		return nil, fmt.Errorf("[TryFixValueType] unsupported schema type '%s'", schemaRef.Value.Type)
 	}
 }
 
-func tryCorrectString(value any) (string, error) {
+func tryString(value any) (string, error) {
 	switch val := value.(type) {
 	case string:
 		return val, nil
@@ -331,15 +331,11 @@ func tryCorrectString(value any) (string, error) {
 	case json.Number:
 		return val.String(), nil
 	default:
-		b, err := sonic.MarshalString(value)
-		if err != nil {
-			return "", fmt.Errorf("tryCorrectString failed, err=%w", err)
-		}
-		return b, nil
+		return "", fmt.Errorf("cannot convert type from '%T' to string", val)
 	}
 }
 
-func tryCorrectInt64(value any) (int64, error) {
+func tryInt64(value any) (int64, error) {
 	switch val := value.(type) {
 	case string:
 		vi64, _ := strconv.ParseInt(val, 10, 64)
@@ -356,7 +352,7 @@ func tryCorrectInt64(value any) (int64, error) {
 	}
 }
 
-func tryCorrectBool(value any) (bool, error) {
+func tryBool(value any) (bool, error) {
 	switch val := value.(type) {
 	case string:
 		return strconv.ParseBool(val)
@@ -367,7 +363,7 @@ func tryCorrectBool(value any) (bool, error) {
 	}
 }
 
-func tryCorrectFloat64(value any) (float64, error) {
+func tryFloat64(value any) (float64, error) {
 	switch val := value.(type) {
 	case string:
 		return strconv.ParseFloat(val, 64)

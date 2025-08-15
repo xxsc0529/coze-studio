@@ -17,6 +17,7 @@
 package convert
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/coze-dev/coze-studio/backend/domain/knowledge/entity"
@@ -27,6 +28,8 @@ import (
 )
 
 func DocumentToParseConfig(doc *entity.Document) *parser.Config {
+	// 添加调试日志
+	fmt.Printf("[DocumentToParseConfig] doc.FileExtension='%s', length=%d, bytes=%v\n", doc.FileExtension, len(doc.FileExtension), []byte(doc.FileExtension))
 	return ToParseConfig(doc.FileExtension, doc.ParsingStrategy, doc.ChunkingStrategy, doc.IsAppend, doc.TableInfo.Columns)
 }
 

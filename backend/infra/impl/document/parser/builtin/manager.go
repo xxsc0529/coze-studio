@@ -50,6 +50,9 @@ func (m *manager) GetParser(config *parser.Config) (parser.Parser, error) {
 			config.ParsingStrategy.HeaderLine, config.ParsingStrategy.DataStartLine)
 	}
 
+	// 添加调试日志
+	fmt.Printf("[GetParser] FileExtension='%s', length=%d, bytes=%v\n", config.FileExtension, len(config.FileExtension), []byte(config.FileExtension))
+
 	switch config.FileExtension {
 	case parser.FileExtensionPDF:
 		pFn = ParseByPython(config, m.storage, m.ocr, goutil.GetPython3Path(), goutil.GetPythonFilePath("parse_pdf.py"))

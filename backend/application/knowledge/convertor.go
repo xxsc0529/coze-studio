@@ -518,13 +518,32 @@ func convertChunkingStrategy2Entity(strategy *dataset.ChunkStrategy) *entity.Chu
 
 func GetExtension(uri string) string {
 	if uri == "" {
+		logs.Infof("GetExtension: empty URI, returning empty string")
 		return ""
 	}
+
+	// 添加调试日志
+	logs.Infof("GetExtension called with URI: '%s'", uri)
+
+	// 首先尝试从URI中提取文件名和扩展名
 	fileExtension := path.Base(uri)
 	ext := path.Ext(fileExtension)
 	if ext != "" {
-		return strings.TrimPrefix(ext, ".")
+		result := strings.TrimPrefix(ext, ".")
+		logs.Infof("GetExtension: extracted extension '%s' from URI", result)
+		return result
 	}
+
+	// 如果URI中没有扩展名，检查是否是MinIO的URI格式
+	// MinIO URI格式通常是: BIZ_BOT_DATASET/userid_timestamp_randomstring
+	// 这种情况下，我们需要根据实际文件类型来推断扩展名
+	if strings.Contains(uri, "BIZ_BOT_DATASET") {
+		// 对于MinIO URI，我们默认使用txt扩展名，因为这是最常见的文本文件类型
+		logs.Infof("GetExtension: MinIO URI detected, returning 'txt'")
+		return "txt"
+	}
+
+	logs.Infof("GetExtension: no extension found, returning empty string")
 	return ""
 }
 func convertCaptionType2Entity(ct *dataset.CaptionType) *parser.ImageAnnotationType {
