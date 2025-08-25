@@ -62,6 +62,7 @@ import (
 	vikingReranker "github.com/coze-dev/coze-studio/backend/infra/impl/document/rerank/vikingdb"
 	"github.com/coze-dev/coze-studio/backend/infra/impl/document/searchstore/elasticsearch"
 	"github.com/coze-dev/coze-studio/backend/infra/impl/document/searchstore/milvus"
+	"github.com/coze-dev/coze-studio/backend/infra/impl/document/searchstore/oceanbase"
 	"github.com/coze-dev/coze-studio/backend/infra/impl/document/searchstore/vikingdb"
 	"github.com/coze-dev/coze-studio/backend/infra/impl/embedding/ark"
 	embeddingHttp "github.com/coze-dev/coze-studio/backend/infra/impl/embedding/http"
@@ -72,6 +73,7 @@ import (
 	"github.com/coze-dev/coze-studio/backend/infra/impl/imagex/veimagex"
 	builtinM2Q "github.com/coze-dev/coze-studio/backend/infra/impl/messages2query/builtin"
 	"github.com/coze-dev/coze-studio/backend/infra/impl/mysql"
+	oceanbaseClient "github.com/coze-dev/coze-studio/backend/infra/impl/oceanbase"
 	"github.com/coze-dev/coze-studio/backend/infra/impl/storage"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/conv"
 	"github.com/coze-dev/coze-studio/backend/pkg/lang/ptr"
@@ -520,6 +522,61 @@ func getVectorStore(ctx context.Context) (searchstore.Manager, error) {
 			return nil, fmt.Errorf("init vikingdb manager failed, err=%w", err)
 		}
 
+		return mgr, nil
+
+	case "oceanbase":
+		emb, err := getEmbedding(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("init oceanbase embedding failed, err=%w", err)
+		}
+
+		host := os.Getenv("OCEANBASE_HOST")
+		port := os.Getenv("OCEANBASE_PORT")
+		user := os.Getenv("OCEANBASE_USER")
+		password := os.Getenv("OCEANBASE_PASSWORD")
+		database := os.Getenv("OCEANBASE_DATABASE")
+
+		if host == "" {
+			host = "127.0.0.1"
+		}
+		if port == "" {
+			port = "2881"
+		}
+		if user == "" {
+			user = "root@test"
+		}
+		if password == "" {
+			password = "coze123"
+		}
+		if database == "" {
+			database = "test"
+		}
+
+		dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+			user, password, host, port, database)
+
+		client, err := oceanbaseClient.NewOceanBaseClient(dsn)
+		if err != nil {
+			return nil, fmt.Errorf("init oceanbase client failed, err=%w", err)
+		}
+
+		if err := client.InitDatabase(ctx); err != nil {
+			return nil, fmt.Errorf("init oceanbase database failed, err=%w", err)
+		}
+
+		managerConfig := &oceanbase.ManagerConfig{
+			Client:        client,
+			Embedding:     emb,
+			BatchSize:     100,
+			EnableCache:   true,
+			CacheTTL:      300 * time.Second,
+			MaxConnections: 100,
+			ConnTimeout:   30 * time.Second,
+		}
+		mgr, err := oceanbase.NewManager(managerConfig)
+		if err != nil {
+			return nil, fmt.Errorf("init oceanbase vector store failed, err=%w", err)
+		}
 		return mgr, nil
 
 	default:

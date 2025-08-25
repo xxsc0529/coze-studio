@@ -9,9 +9,11 @@ DUMP_DB_SCRIPT := $(SCRIPTS_DIR)/setup/db_migrate_dump.sh
 SETUP_DOCKER_SCRIPT := $(SCRIPTS_DIR)/setup/docker.sh
 SETUP_PYTHON_SCRIPT := $(SCRIPTS_DIR)/setup/python.sh
 COMPOSE_FILE := docker/docker-compose-debug.yml
+OCEANBASE_COMPOSE_FILE := docker/docker-compose-oceanbase.yml
 MYSQL_SCHEMA := ./docker/volumes/mysql/schema.sql
 MYSQL_INIT_SQL := ./docker/volumes/mysql/sql_init.sql
 ENV_FILE := ./docker/.env.debug
+OCEANBASE_ENV_FILE := ./docker/.env.oceanbase
 STATIC_DIR := ./bin/resources/static
 ES_INDEX_SCHEMA := ./docker/volumes/elasticsearch/es_index_schema
 ES_SETUP_SCRIPT := ./docker/volumes/elasticsearch/setup_es.sh
@@ -35,6 +37,14 @@ server: env
 	fi
 	@echo "Building and run server..."
 	@APP_ENV=debug bash $(BUILD_SERVER_SCRIPT) -start
+
+oceanbase_server: oceanbase_env
+	@if [ ! -d "$(STATIC_DIR)" ]; then \
+		echo "Static directory '$(STATIC_DIR)' not found, building frontend..."; \
+		$(MAKE) fe; \
+	fi
+	@echo "Building and run OceanBase server..."
+	@APP_ENV=oceanbase bash $(BUILD_SERVER_SCRIPT) -start
 
 build_server:
 	@echo "Building server..."
@@ -100,6 +110,28 @@ setup_es_index:
 	@. $(ENV_FILE); \
 	bash $(ES_SETUP_SCRIPT) --index-dir $(ES_INDEX_SCHEMA) --docker-host false --es-address "$$ES_ADDR"
 
+oceanbase: oceanbase_env oceanbase_middleware python oceanbase_server
+
+oceanbase_env:
+	@if [ ! -f "$(OCEANBASE_ENV_FILE)" ]; then \
+		echo "OceanBase env file not found, using example env..."; \
+		cp ./docker/.env.oceanbase.example $(OCEANBASE_ENV_FILE); \
+		echo "Please edit $(OCEANBASE_ENV_FILE) to configure your settings"; \
+	fi
+
+oceanbase_middleware:
+	@echo "Start OceanBase middleware docker environment for opencoze app"
+	@docker compose -f $(OCEANBASE_COMPOSE_FILE) --env-file $(OCEANBASE_ENV_FILE) --profile middleware up -d --wait
+	@echo "OceanBase middleware is ready!"
+
+oceanbase_down: oceanbase_env
+	@echo "Stop OceanBase docker containers"
+	@docker compose -f $(OCEANBASE_COMPOSE_FILE) --env-file $(OCEANBASE_ENV_FILE) --profile '*' down
+
+oceanbase_clean: oceanbase_down
+	@echo "Remove OceanBase docker containers and volumes data"
+	@rm -rf ./docker/data/oceanbase
+
 help:
 	@echo "Usage: make [target]"
 	@echo ""
@@ -121,4 +153,12 @@ help:
 	@echo "  python           - Setup python environment."
 	@echo "  atlas-hash       - Rehash atlas migration files."
 	@echo "  setup_es_index   - Setup elasticsearch index."
+	@echo ""
+	@echo "OceanBase Commands:"
+	@echo "  oceanbase        - Start OceanBase environment (middleware + server)."
+	@echo "  oceanbase_server - Start OceanBase server only."
+	@echo "  oceanbase_middleware - Start OceanBase middleware only."
+	@echo "  oceanbase_down   - Stop OceanBase containers."
+	@echo "  oceanbase_clean  - Stop OceanBase containers and clean data."
+	@echo ""
 	@echo "  help             - Show this help message."
